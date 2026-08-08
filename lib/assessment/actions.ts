@@ -5,7 +5,7 @@ import { getProgrammes } from "@/lib/data/programmes";
 import { scoreAssessment, computeLeadPriority } from "./scoring";
 import type { Answers, KycProfile, Route, SubRoute } from "./types";
 
-export interface StartInput {
+interface StartInput {
   full_name: string;
   phone: string;
   consent: boolean;
@@ -52,7 +52,7 @@ export async function startAssessment(input: StartInput): Promise<{ leadId: stri
   return { leadId: lead.id, assessmentId: assessment.id };
 }
 
-export interface CompleteInput {
+interface CompleteInput {
   leadId: string;
   assessmentId: string;
   route: Route;
@@ -119,6 +119,7 @@ export async function completeAssessment(input: CompleteInput): Promise<{ result
       strengths: result.strengths,
       gaps: result.gaps,
       investment_state: result.investment_state,
+      investment_note: result.investment_note,
       pains: result.pains,
       outcomes: result.outcomes,
       tna_snapshot: result.tna_snapshot,
@@ -138,7 +139,7 @@ export async function markResultViewed(leadId: string): Promise<void> {
   await db.from("leads").update({ result_viewed_at: new Date().toISOString() }).eq("id", leadId);
 }
 
-export interface EnquiryInput {
+interface EnquiryInput {
   leadId?: string | null;
   resultId?: string | null;
   type: "proposal" | "consultation" | "enquiry";

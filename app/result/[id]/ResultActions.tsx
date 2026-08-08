@@ -21,7 +21,7 @@ export default function ResultActions({ leadId, resultId }: { leadId: string; re
       setDone(
         type === "consultation"
           ? "Thank you — your consultation request has been received. Farmaz will be in touch to confirm a time."
-          : "Thank you — your tailored proposal request has been received. You&apos;ll hear back shortly.",
+          : "Thank you — your tailored proposal request has been received. You'll hear back shortly.",
       );
       setOpen(null);
     } catch {

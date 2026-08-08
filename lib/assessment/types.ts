@@ -38,6 +38,19 @@ export interface Programme {
   sort_order: number;
 }
 
+export interface ProgrammeInput {
+  id?: string;
+  code: string;
+  title: string;
+  summary: string;
+  modules: string[];
+  target_dimensions: DimensionCode[];
+  intended_capability: string;
+  route_fit: string[];
+  active: boolean;
+  sort_order: number;
+}
+
 export interface DimensionScore {
   code: DimensionCode;
   label: string;
