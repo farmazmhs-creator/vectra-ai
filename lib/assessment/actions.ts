@@ -3,6 +3,7 @@
 import { supabaseData } from "@/lib/supabase/data";
 import { getProgrammes } from "@/lib/data/programmes";
 import { scoreAssessment, computeLeadPriority } from "./scoring";
+import { emailResultToCustomer, emailLeadAlertToTrainer, emailEnquiryAlertToTrainer } from "@/lib/email/send";
 import type { Answers, KycProfile, Route, SubRoute } from "./types";
 
 interface StartInput {
@@ -134,6 +135,18 @@ export async function completeAssessment(input: CompleteInput): Promise<{ result
     .single();
   if (rErr) throw new Error(rErr.message);
 
+  // Fire acknowledgement/result-summary + trainer alert emails (best-effort).
+  try {
+    const { data: leadRow } = await db.from("leads").select("*").eq("id", input.leadId).single();
+    if (leadRow) {
+      const resultLike = { id: row.id, overall_score: result.overall_score, stage: result.stage, route: input.route, gaps: result.gaps };
+      await emailResultToCustomer(leadRow, resultLike);
+      await emailLeadAlertToTrainer(leadRow, resultLike);
+    }
+  } catch {
+    // never let email break the core result flow
+  }
+
   return { resultId: row.id };
 }
 
@@ -164,6 +177,17 @@ export async function createEnquiry(input: EnquiryInput): Promise<{ ok: true }> 
   if (input.leadId) {
     const status = input.type === "consultation" ? "booked" : "proposal";
     await db.from("leads").update({ lead_status: status }).eq("id", input.leadId);
+  }
+  // Notify the trainer (best-effort).
+  try {
+    let leadRow = null;
+    if (input.leadId) {
+      const { data } = await db.from("leads").select("*").eq("id", input.leadId).single();
+      leadRow = data;
+    }
+    await emailEnquiryAlertToTrainer(leadRow, input.type, input.message, input.preferred_time);
+  } catch {
+    // ignore
   }
   return { ok: true };
 }
