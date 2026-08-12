@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import { supabaseData } from "@/lib/supabase/data";
 import { SiteFooter, Brand, ScoreBar } from "@/app/components/Chrome";
 import { ROUTE_LABELS } from "@/lib/assessment/questions";
+import { ROUTE_LABELS_BM } from "@/lib/assessment/questions-bm";
+import { t, type Lang } from "@/lib/i18n";
 import type { DimensionScore, Recommendation, Route, TnaSnapshot } from "@/lib/assessment/types";
 import ResultActions from "./ResultActions";
+import { PrintButton } from "./PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +35,12 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   if (!result) notFound();
   const { data: lead } = await db.from("leads").select("*").eq("id", result.lead_id).single();
 
+  const lang: Lang = lead?.language === "bm" ? "bm" : "en";
+  const bm = lang === "bm";
+  const tr = (k: Parameters<typeof t>[1]) => t(lang, k);
+
   const route = result.route as Route;
+  const routeLabel = bm ? ROUTE_LABELS_BM[route] : ROUTE_LABELS[route];
   const dims = (result.dimension_scores ?? []) as DimensionScore[];
   const strengths = (result.strengths ?? []) as DimensionScore[];
   const gaps = (result.gaps ?? []) as DimensionScore[];
@@ -42,7 +50,11 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const pains = (result.pains ?? []) as string[];
   const outcomes = (result.outcomes ?? []) as string[];
   const score = result.overall_score as number;
-  const firstName = (lead?.full_name ?? "").split(" ")[0] || "there";
+  const firstName = (lead?.full_name ?? "").split(" ")[0] || (bm ? "anda" : "there");
+  const kind = route === "organisation" ? (bm ? "Kesediaan" : "Readiness") : (bm ? "Keupayaan" : "Capability");
+  const heading = bm
+    ? `${firstName}, ini diagnostik ${kind} AI anda`
+    : `${firstName}, here is your AI ${kind} diagnostic`;
 
   const stageColor = score >= 65 ? "var(--green)" : score >= 45 ? "var(--gold)" : "var(--accent-2)";
 
@@ -51,22 +63,22 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       <div className="gradient-hero">
         <div className="container-x py-6 flex items-center justify-between">
           <Brand />
-          <span className="badge badge-free">Instant Diagnostic Report</span>
+          <div className="flex items-center gap-3">
+            <PrintButton label={tr("download_pdf")} />
+            <span className="badge badge-free">{tr("instant_report")}</span>
+          </div>
         </div>
 
-        {/* Hero summary */}
         <div className="container-x pb-10">
           <div className="panel p-6 sm:p-8">
-            <p className="kicker mb-2">{ROUTE_LABELS[route]}</p>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-1">
-              {firstName}, here is your AI {route === "organisation" ? "Readiness" : "Capability"} diagnostic
-            </h1>
-            <p style={{ color: "var(--muted)" }} className="mb-6">Generated instantly from your responses · {new Date(result.created_at).toLocaleDateString()}</p>
+            <p className="kicker mb-2">{routeLabel}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-1">{heading}</h1>
+            <p style={{ color: "var(--muted)" }} className="mb-6">{tr("generated_instantly")} · {new Date(result.created_at).toLocaleDateString()}</p>
 
             <div className="grid sm:grid-cols-[220px_1fr] gap-6 items-center">
               <div className="panel-2 p-6 text-center">
                 <div className="text-6xl font-extrabold" style={{ color: stageColor }}>{score}</div>
-                <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>out of 100</div>
+                <div className="text-sm mt-1" style={{ color: "var(--muted)" }}>{tr("out_of_100")}</div>
                 <div className="mt-3 inline-block badge" style={{ color: stageColor, borderColor: stageColor }}>{result.stage}</div>
               </div>
               <div>
@@ -87,18 +99,16 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="container-x grid gap-5 pb-4" style={{ maxWidth: 920 }}>
-        {/* 1. Executive summary */}
-        <Section n={1} title="Executive Diagnostic Summary">
+        <Section n={1} title={tr("sec1")}>
           <div className="grid sm:grid-cols-3 gap-3 mb-4">
-            <div className="panel-2 p-4"><div className="text-xs" style={{ color: "var(--muted-2)" }}>Assessment</div><div className="font-semibold">{ROUTE_LABELS[route]}</div></div>
-            <div className="panel-2 p-4"><div className="text-xs" style={{ color: "var(--muted-2)" }}>Overall score</div><div className="font-semibold">{score} / 100</div></div>
-            <div className="panel-2 p-4"><div className="text-xs" style={{ color: "var(--muted-2)" }}>Stage</div><div className="font-semibold">{result.stage}</div></div>
+            <div className="panel-2 p-4"><div className="text-xs" style={{ color: "var(--muted-2)" }}>{tr("r_assessment")}</div><div className="font-semibold">{routeLabel}</div></div>
+            <div className="panel-2 p-4"><div className="text-xs" style={{ color: "var(--muted-2)" }}>{tr("r_overall")}</div><div className="font-semibold">{score} / 100</div></div>
+            <div className="panel-2 p-4"><div className="text-xs" style={{ color: "var(--muted-2)" }}>{tr("r_stage")}</div><div className="font-semibold">{result.stage}</div></div>
           </div>
           <p style={{ color: "var(--muted)" }}>{result.stage} — {tna?.current_state}</p>
         </Section>
 
-        {/* 2. Profile */}
-        <Section n={2} title="Your AI Capability / Readiness Profile">
+        <Section n={2} title={tr("sec2")}>
           <div className="grid gap-4">
             {dims.map((d) => (
               <div key={d.code}>
@@ -113,14 +123,12 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </div>
         </Section>
 
-        {/* 3. Investment review */}
-        <Section n={3} title="AI / LLM Investment & Utilisation Review">
+        <Section n={3} title={tr("sec3")}>
           <div className="badge mb-3" style={{ color: "var(--gold)", borderColor: "rgba(231,182,75,0.4)" }}>{result.investment_state}</div>
           <p style={{ color: "var(--muted)" }}>{(result as { investment_note?: string }).investment_note ?? tna?.root_cause}</p>
         </Section>
 
-        {/* 4. Strengths */}
-        <Section n={4} title="Key Strengths">
+        <Section n={4} title={tr("sec4")}>
           {strengths.length ? (
             <ul className="grid gap-3">
               {strengths.map((s) => (
@@ -131,12 +139,11 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
               ))}
             </ul>
           ) : (
-            <p style={{ color: "var(--muted)" }}>Your strongest foundations are still emerging — the priority gaps below are where focused training will move the needle fastest.</p>
+            <p style={{ color: "var(--muted)" }}>{bm ? "Asas terkuat anda masih muncul — jurang keutamaan di bawah ialah tempat latihan fokus akan memberi kesan terpantas." : "Your strongest foundations are still emerging — the priority gaps below are where focused training will move the needle fastest."}</p>
           )}
         </Section>
 
-        {/* 5. Gaps */}
-        <Section n={5} title="Priority Gaps, Risks & Constraints">
+        <Section n={5} title={tr("sec5")}>
           <ul className="grid gap-3">
             {gaps.map((g) => (
               <li key={g.code} className="panel-2 p-4">
@@ -146,60 +153,50 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
             ))}
           </ul>
           <div className="mt-4 text-sm panel-2 p-4" style={{ color: "var(--muted)" }}>
-            <strong style={{ color: "var(--text)" }}>Training-solvable vs not:</strong> {tna?.need_classification?.join(" · ")}
+            <strong style={{ color: "var(--text)" }}>{tr("r_trainable")}</strong> {tna?.need_classification?.join(" · ")}
           </div>
         </Section>
 
-        {/* 6. Pains & outcomes */}
-        <Section n={6} title="Pain Points & Desired Outcomes">
+        <Section n={6} title={tr("sec6")}>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <div className="text-xs mb-2" style={{ color: "var(--muted-2)" }}>Biggest opportunities you selected</div>
+              <div className="text-xs mb-2" style={{ color: "var(--muted-2)" }}>{tr("r_biggest")}</div>
               <div className="flex flex-wrap gap-2">{pains.length ? pains.map((p) => <Chip key={p}>{p}</Chip>) : <span style={{ color: "var(--muted)" }}>—</span>}</div>
             </div>
             <div>
-              <div className="text-xs mb-2" style={{ color: "var(--muted-2)" }}>Outcomes you want</div>
+              <div className="text-xs mb-2" style={{ color: "var(--muted-2)" }}>{tr("r_outcomes")}</div>
               <div className="flex flex-wrap gap-2">{outcomes.length ? outcomes.map((o) => <Chip key={o} tone="accent">{o}</Chip>) : <span style={{ color: "var(--muted)" }}>—</span>}</div>
             </div>
           </div>
         </Section>
 
-        {/* 7. Opportunity horizon */}
-        <Section n={7} title="Opportunity Horizon">
+        <Section n={7} title={tr("sec7")}>
           <p style={{ color: "var(--text)" }}>{result.opportunity_horizon}</p>
         </Section>
 
-        {/* 8. TNA snapshot */}
-        <Section n={8} title={`Instant Training Needs Analysis Snapshot`}>
+        <Section n={8} title={tr("sec8")}>
           <div className="badge mb-4" style={{ color: "var(--accent-2)", borderColor: "var(--border-2)" }}>{tna?.label}</div>
           <div className="grid gap-3 text-sm">
-            <Row label="Objective">{tna?.objective}</Row>
-            <Row label="Current state">{tna?.current_state}</Row>
-            <Row label="Required future capability">
-              <ul className="list-disc pl-5">{(tna?.required_capability ?? []).map((c) => <li key={c}>{c}</li>)}</ul>
-            </Row>
-            <Row label="Root cause">{tna?.root_cause}</Row>
-            <Row label="Training need classification">{tna?.need_classification?.join(" · ")}</Row>
-            <Row label="Priority learner group">{tna?.learner_group?.join(", ")}</Row>
-            <Row label="Recommended intervention">
-              <ul className="list-disc pl-5">{(tna?.recommended_intervention ?? []).map((c) => <li key={c}>{c}</li>)}</ul>
-            </Row>
-            <Row label="Success evidence">
-              <ul className="list-disc pl-5">{(tna?.success_evidence ?? []).map((c) => <li key={c}>{c}</li>)}</ul>
-            </Row>
+            <Row label={tr("tna_objective")}>{tna?.objective}</Row>
+            <Row label={tr("tna_current")}>{tna?.current_state}</Row>
+            <Row label={tr("tna_required")}><ul className="list-disc pl-5">{(tna?.required_capability ?? []).map((c) => <li key={c}>{c}</li>)}</ul></Row>
+            <Row label={tr("tna_root")}>{tna?.root_cause}</Row>
+            <Row label={tr("tna_class")}>{tna?.need_classification?.join(" · ")}</Row>
+            <Row label={tr("tna_learner")}>{tna?.learner_group?.join(", ")}</Row>
+            <Row label={tr("tna_intervention")}><ul className="list-disc pl-5">{(tna?.recommended_intervention ?? []).map((c) => <li key={c}>{c}</li>)}</ul></Row>
+            <Row label={tr("tna_evidence")}><ul className="list-disc pl-5">{(tna?.success_evidence ?? []).map((c) => <li key={c}>{c}</li>)}</ul></Row>
           </div>
         </Section>
 
-        {/* 9. Training prescription */}
-        <Section n={9} title="Training Prescription — Gap → Programme → Intended Capability">
+        <Section n={9} title={tr("sec9")}>
           <div className="grid gap-3">
             {recs.map((r, i) => (
               <div key={i} className="panel-2 p-4">
                 <div className="grid sm:grid-cols-[1fr_auto] gap-2 items-start">
                   <div>
-                    <div className="text-xs" style={{ color: "var(--muted-2)" }}>Identified gap</div>
+                    <div className="text-xs" style={{ color: "var(--muted-2)" }}>{tr("r_identified_gap")}</div>
                     <div className="font-medium mb-2">{r.gap}</div>
-                    <div className="text-xs" style={{ color: "var(--muted-2)" }}>Intended capability</div>
+                    <div className="text-xs" style={{ color: "var(--muted-2)" }}>{tr("r_intended_cap")}</div>
                     <div className="text-sm" style={{ color: "var(--muted)" }}>{r.intended_capability}</div>
                   </div>
                   <div className="text-right">
@@ -212,8 +209,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </div>
         </Section>
 
-        {/* 10. Next path */}
-        <Section n={10} title="Suggested Next 30–90 Day Capability Path">
+        <Section n={10} title={tr("sec10")}>
           <div className="grid sm:grid-cols-3 gap-3">
             {nextPath.map((p) => (
               <div key={p.phase} className="panel-2 p-4">
@@ -224,18 +220,22 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </div>
         </Section>
 
-        {/* 12. CTA */}
-        {lead && <ResultActions leadId={lead.id} resultId={result.id} />}
+        {lead && <ResultActions leadId={lead.id} resultId={result.id} lang={lang} />}
 
-        {/* 11. Methodology */}
         <div className="panel-2 p-5 text-xs" style={{ color: "var(--muted-2)" }}>
-          <strong style={{ color: "var(--muted)" }}>Methodology & limitations:</strong> This score is calculated deterministically from your submitted responses.
-          {route === "organisation" ? " The Organisation Snapshot reflects a single respondent's informed view, not a full enterprise-wide audit." : ""}
-          {" "}Results are diagnostic and do not constitute an audit, compliance certification or guaranteed ROI assessment. The TNA is structured in alignment with HRD Corp published TNA principles; it is an automated diagnostic, not a formal HRD Corp approval.
+          <strong style={{ color: "var(--muted)" }}>{bm ? "Metodologi & batasan:" : "Methodology & limitations:"}</strong>{" "}
+          {bm
+            ? "Skor ini dikira secara deterministik daripada jawapan yang anda serahkan."
+            : "This score is calculated deterministically from your submitted responses."}
+          {route === "organisation" ? (bm ? " Gambaran Organisasi mencerminkan pandangan seorang responden, bukan audit seluruh perusahaan." : " The Organisation Snapshot reflects a single respondent's informed view, not a full enterprise-wide audit.") : ""}
+          {" "}
+          {bm
+            ? "Keputusan adalah diagnostik dan bukan audit, pensijilan pematuhan atau jaminan ROI. TNA distruktur selaras dengan prinsip TNA terbitan HRD Corp; ia diagnostik automatik, bukan kelulusan rasmi HRD Corp."
+            : "Results are diagnostic and do not constitute an audit, compliance certification or guaranteed ROI assessment. The TNA is structured in alignment with HRD Corp published TNA principles; it is an automated diagnostic, not a formal HRD Corp approval."}
         </div>
 
-        <div className="text-center py-4">
-          <Link href="/" className="link-muted text-sm">← Back to home</Link>
+        <div className="text-center py-4 no-print">
+          <Link href="/" className="link-muted text-sm">{tr("back_home")}</Link>
         </div>
       </div>
       <SiteFooter />

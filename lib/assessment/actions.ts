@@ -59,6 +59,7 @@ interface CompleteInput {
   client_subroute?: SubRoute;
   answers: Answers;
   kyc: KycProfile;
+  lang?: "en" | "bm";
 }
 
 export async function completeAssessment(input: CompleteInput): Promise<{ resultId: string }> {
@@ -69,8 +70,9 @@ export async function completeAssessment(input: CompleteInput): Promise<{ result
     throw new Error("Please complete the required unlock fields.");
   }
 
+  const lang = input.lang === "bm" ? "bm" : "en";
   const programmes = await getProgrammes(true);
-  const result = scoreAssessment(input.route, input.client_subroute, input.answers, programmes);
+  const result = scoreAssessment(input.route, input.client_subroute, input.answers, programmes, lang);
   const priority = computeLeadPriority(kyc);
 
   // 1. persist the answers + complete the assessment
@@ -100,6 +102,7 @@ export async function completeAssessment(input: CompleteInput): Promise<{ result
       org_size: kyc.org_size ?? null,
       client_details: kyc.client_details ?? null,
       timing: kyc.timing ?? null,
+      language: lang,
       kyc_completed_at: new Date().toISOString(),
       lead_priority: priority,
     })

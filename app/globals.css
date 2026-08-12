@@ -174,3 +174,18 @@ label.field-label { display: block; font-size: 0.82rem; color: var(--muted); mar
 .hairline { border-top: 1px solid var(--border); }
 
 .kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.72rem; font-weight: 700; color: var(--accent-2); }
+
+/* ── Print / PDF export ── */
+@media print {
+  :root {
+    --bg: #ffffff; --bg-2: #ffffff; --panel: #ffffff; --panel-2: #f7f7fb;
+    --border: #d8d8e4; --border-2: #c8c8d8; --text: #14141f; --muted: #4a4a5e; --muted-2: #6f6f8c;
+  }
+  body { background: #fff; color: #14141f; }
+  .no-print { display: none !important; }
+  .gradient-hero { background: #fff !important; }
+  .panel, .panel-2 { box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; }
+  section { break-inside: avoid; }
+  .container-x { max-width: 100% !important; }
+  a[href]:after { content: ""; }
+}

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { t, type Lang } from "@/lib/i18n";
+import { LangToggle } from "./LangToggle";
 
 export function Brand({ small = false }: { small?: boolean }) {
   return (
@@ -27,20 +29,23 @@ export function Brand({ small = false }: { small?: boolean }) {
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ lang = "en" }: { lang?: Lang }) {
   return (
     <header className="sticky top-0 z-30" style={{ background: "rgba(7,7,12,0.72)", backdropFilter: "blur(10px)", borderBottom: "1px solid var(--border)" }}>
       <div className="container-x flex items-center justify-between" style={{ height: 64 }}>
         <Brand />
-        <nav className="hidden sm:flex items-center gap-6 text-sm" style={{ color: "var(--muted)" }}>
-          <a href="/#what-you-get" className="link-muted">What You Get</a>
-          <a href="/#how-it-works" className="link-muted">How It Works</a>
-          <a href="/#programmes" className="link-muted">Programmes</a>
-          <Link href="/admin" className="link-muted">Admin</Link>
+        <nav className="hidden md:flex items-center gap-6 text-sm" style={{ color: "var(--muted)" }}>
+          <a href="/#what-you-get" className="link-muted">{t(lang, "nav_what")}</a>
+          <a href="/#how-it-works" className="link-muted">{t(lang, "nav_how")}</a>
+          <a href="/#programmes" className="link-muted">{t(lang, "nav_programmes")}</a>
+          <Link href="/admin" className="link-muted">{t(lang, "nav_admin")}</Link>
         </nav>
-        <Link href="/assessment" className="btn btn-primary" style={{ padding: "0.6rem 1rem", fontSize: 14 }}>
-          Start FREE Assessment
-        </Link>
+        <div className="flex items-center gap-3">
+          <LangToggle lang={lang} />
+          <Link href="/assessment" className="btn btn-primary" style={{ padding: "0.6rem 1rem", fontSize: 14 }}>
+            {t(lang, "cta_start")}
+          </Link>
+        </div>
       </div>
     </header>
   );
