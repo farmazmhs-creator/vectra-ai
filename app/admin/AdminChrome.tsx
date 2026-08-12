@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/app/components/Chrome";
+import { LogoutButton } from "./LogoutButton";
 
 export function AdminHeader({ active }: { active?: "leads" | "programmes" }) {
   return (
@@ -13,6 +14,7 @@ export function AdminHeader({ active }: { active?: "leads" | "programmes" }) {
           <Link href="/admin" className={active === "leads" ? "" : "link-muted"} style={active === "leads" ? { color: "var(--text)", fontWeight: 600 } : {}}>Leads</Link>
           <Link href="/admin/programmes" className={active === "programmes" ? "" : "link-muted"} style={active === "programmes" ? { color: "var(--text)", fontWeight: 600 } : {}}>Programmes</Link>
           <Link href="/" className="link-muted">View site ↗</Link>
+          <LogoutButton />
         </nav>
       </div>
     </header>
