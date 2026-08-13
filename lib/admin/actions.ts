@@ -46,6 +46,10 @@ export async function saveProgramme(input: ProgrammeInput) {
     route_fit: input.route_fit,
     active: input.active,
     sort_order: input.sort_order,
+    title_bm: input.title_bm ?? null,
+    summary_bm: input.summary_bm ?? null,
+    intended_capability_bm: input.intended_capability_bm ?? null,
+    modules_bm: input.modules_bm ?? [],
   };
   if (!payload.code || !payload.title) throw new Error("Code and title are required.");
   if (input.id) {

@@ -10,6 +10,7 @@ const ROUTES = ["individual", "team", "organisation", "client"];
 
 const EMPTY: ProgrammeInput = {
   code: "", title: "", summary: "", modules: [], target_dimensions: [], intended_capability: "", route_fit: [], active: true, sort_order: 100,
+  title_bm: "", summary_bm: "", intended_capability_bm: "", modules_bm: [],
 };
 
 export function ProgrammesManager({ programmes }: { programmes: Programme[] }) {
@@ -23,6 +24,7 @@ export function ProgrammesManager({ programmes }: { programmes: Programme[] }) {
       id: p.id, code: p.code, title: p.title, summary: p.summary ?? "", modules: p.modules ?? [],
       target_dimensions: p.target_dimensions ?? [], intended_capability: p.intended_capability ?? "",
       route_fit: p.route_fit ?? [], active: p.active, sort_order: p.sort_order,
+      title_bm: p.title_bm ?? "", summary_bm: p.summary_bm ?? "", intended_capability_bm: p.intended_capability_bm ?? "", modules_bm: p.modules_bm ?? [],
     });
   }
 
@@ -82,6 +84,19 @@ export function ProgrammesManager({ programmes }: { programmes: Programme[] }) {
             <div><label className="field-label">Summary</label><textarea className="textarea" rows={2} value={editing.summary} onChange={(e) => setEditing({ ...editing, summary: e.target.value })} /></div>
             <div><label className="field-label">Modules (one per line)</label><textarea className="textarea" rows={3} value={editing.modules.join("\n")} onChange={(e) => setEditing({ ...editing, modules: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })} /></div>
             <div><label className="field-label">Intended capability</label><textarea className="textarea" rows={2} value={editing.intended_capability} onChange={(e) => setEditing({ ...editing, intended_capability: e.target.value })} /></div>
+
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+              <div className="badge mb-2" style={{ color: "var(--accent-2)" }}>Bahasa Malaysia</div>
+              <label className="field-label">Tajuk (BM)</label>
+              <input className="input mb-2" value={editing.title_bm ?? ""} onChange={(e) => setEditing({ ...editing, title_bm: e.target.value })} placeholder="Falls back to English if empty" />
+              <label className="field-label">Ringkasan (BM)</label>
+              <textarea className="textarea mb-2" rows={2} value={editing.summary_bm ?? ""} onChange={(e) => setEditing({ ...editing, summary_bm: e.target.value })} />
+              <label className="field-label">Modul (BM, satu setiap baris)</label>
+              <textarea className="textarea mb-2" rows={3} value={(editing.modules_bm ?? []).join("\n")} onChange={(e) => setEditing({ ...editing, modules_bm: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })} />
+              <label className="field-label">Keupayaan disasarkan (BM)</label>
+              <textarea className="textarea" rows={2} value={editing.intended_capability_bm ?? ""} onChange={(e) => setEditing({ ...editing, intended_capability_bm: e.target.value })} />
+            </div>
+
             <div>
               <label className="field-label">Target dimensions</label>
               <div className="flex flex-wrap gap-1.5">

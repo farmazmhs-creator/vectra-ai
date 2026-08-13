@@ -91,9 +91,11 @@ function classifyNeedsEN(dims: DimensionScore[], a: Answers): string[] {
   return needs.length ? needs : ["Training / capability need"];
 }
 
-function buildRecommendations(gaps: DimensionScore[], route: Route, programmes: Programme[]): Recommendation[] {
+function buildRecommendations(gaps: DimensionScore[], route: Route, programmes: Programme[], bm: boolean): Recommendation[] {
   const sub = route === "client" ? "individual" : route;
   const active = programmes.filter((p) => p.active);
+  const title = (p: Programme) => (bm ? p.title_bm || p.title : p.title);
+  const cap = (p: Programme) => (bm ? p.intended_capability_bm || p.intended_capability || "" : p.intended_capability ?? "");
   const recs: Recommendation[] = [];
   const used = new Set<string>();
   for (const gap of gaps) {
@@ -106,14 +108,14 @@ function buildRecommendations(gaps: DimensionScore[], route: Route, programmes: 
       })[0];
     if (match) {
       used.add(match.code);
-      recs.push({ gap: gap.label, programme_code: match.code, programme: match.title, intended_capability: match.intended_capability ?? "" });
+      recs.push({ gap: gap.label, programme_code: match.code, programme: title(match), intended_capability: cap(match) });
     }
   }
   if (recs.length < 2) {
     for (const p of active.sort((x, y) => x.sort_order - y.sort_order)) {
       if (used.has(p.code)) continue;
       used.add(p.code);
-      recs.push({ gap: gaps[0]?.label ?? "General capability", programme_code: p.code, programme: p.title, intended_capability: p.intended_capability ?? "" });
+      recs.push({ gap: gaps[0]?.label ?? (bm ? "Keupayaan umum" : "General capability"), programme_code: p.code, programme: title(p), intended_capability: cap(p) });
       if (recs.length >= 3) break;
     }
   }
@@ -166,7 +168,7 @@ export function scoreAssessment(
   const needsEN = classifyNeedsEN(dimension_scores, answers);
   const need_classification = bm ? needsEN.map((n) => NEEDS_BM[n] ?? n) : needsEN;
 
-  const recommendations = buildRecommendations(gaps, route, programmes);
+  const recommendations = buildRecommendations(gaps, route, programmes, bm);
 
   const tnaKind: "individual" | "team" | "organisation" =
     route === "individual" || (route === "client" && sub === "individual") ? "individual"

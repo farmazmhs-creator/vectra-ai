@@ -142,16 +142,21 @@ export default async function Home() {
           <h2 className="text-3xl font-bold mt-2 mb-2">{tr("prog_title")}</h2>
           <p style={{ color: "var(--muted)" }} className="mb-8 max-w-2xl">{tr("prog_sub")}</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {programmes.map((p) => (
-              <div key={p.id} className="panel p-5">
-                <div className="badge mb-2" style={{ color: "var(--accent-2)" }}>{p.code}</div>
-                <div className="font-semibold mb-1.5">{p.title}</div>
-                <div className="text-sm mb-3" style={{ color: "var(--muted)" }}>{p.summary}</div>
-                <ul className="text-xs grid gap-1" style={{ color: "var(--muted-2)" }}>
-                  {(p.modules ?? []).slice(0, 4).map((m) => <li key={m}>· {m}</li>)}
-                </ul>
-              </div>
-            ))}
+            {programmes.map((p) => {
+              const title = bm ? p.title_bm || p.title : p.title;
+              const summary = bm ? p.summary_bm || p.summary : p.summary;
+              const modules = bm && p.modules_bm && p.modules_bm.length ? p.modules_bm : p.modules;
+              return (
+                <div key={p.id} className="panel p-5">
+                  <div className="badge mb-2" style={{ color: "var(--accent-2)" }}>{p.code}</div>
+                  <div className="font-semibold mb-1.5">{title}</div>
+                  <div className="text-sm mb-3" style={{ color: "var(--muted)" }}>{summary}</div>
+                  <ul className="text-xs grid gap-1" style={{ color: "var(--muted-2)" }}>
+                    {(modules ?? []).slice(0, 4).map((m) => <li key={m}>· {m}</li>)}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

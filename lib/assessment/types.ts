@@ -36,6 +36,11 @@ export interface Programme {
   route_fit: string[];
   active: boolean;
   sort_order: number;
+  // Bahasa Malaysia variants (fall back to the base fields when null/empty)
+  title_bm?: string | null;
+  summary_bm?: string | null;
+  intended_capability_bm?: string | null;
+  modules_bm?: string[];
 }
 
 export interface ProgrammeInput {
@@ -49,6 +54,10 @@ export interface ProgrammeInput {
   route_fit: string[];
   active: boolean;
   sort_order: number;
+  title_bm?: string;
+  summary_bm?: string;
+  intended_capability_bm?: string;
+  modules_bm?: string[];
 }
 
 export interface DimensionScore {
