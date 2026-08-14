@@ -1,7 +1,9 @@
 import { supabaseData } from "@/lib/supabase/data";
 
 const FROM = process.env.EMAIL_FROM || "Farmaz Somu | AI Trainer <onboarding@resend.dev>";
-const TRAINER_EMAIL = process.env.TRAINER_EMAIL || "farmazai1502@gmail.com";
+// Defaults to the Resend account owner so alerts deliver in test mode (before a
+// domain is verified). Override with TRAINER_EMAIL env once a domain is set up.
+const TRAINER_EMAIL = process.env.TRAINER_EMAIL || "farmazmhs@gmail.com";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://vectra-ai-sooty.vercel.app";
 
 export interface OutboundEmail {
