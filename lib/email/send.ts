@@ -17,7 +17,8 @@ export interface OutboundEmail {
 // Never throws — email problems must not break the core flow.
 export async function sendEmail(email: OutboundEmail): Promise<void> {
   const db = supabaseData();
-  const key = process.env.RESEND_API_KEY;
+  // Accept either RESEND_API_KEY (canonical) or RESEND, to be forgiving of setup.
+  const key = process.env.RESEND_API_KEY || process.env.RESEND;
   let status = "queued";
   let provider: string | null = null;
   let error: string | null = null;
