@@ -22,7 +22,7 @@ function renderAnswer(code: string, value: Answers[string]): string {
   const q = QUESTIONS.find((x) => x.code === code);
   if (!q) return String(value ?? "—");
   if (q.type === "single") {
-    const opt = q.options?.find((o) => o.value === Number(value));
+    const opt = q.options?.find((o) => o.value === Number(value)) ?? q.options?.find((o) => o.code === value);
     return opt?.label ?? String(value ?? "—");
   }
   if (q.type === "multi" && Array.isArray(value)) return optionLabels(code, value).join(", ");

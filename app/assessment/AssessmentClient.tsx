@@ -227,9 +227,12 @@ export default function AssessmentClient({ lang: initialLang }: { lang: Lang }) 
             {current.type === "single" && (
               <div className="grid gap-3">
                 {current.options!.map((o) => {
-                  const selected = Number(answers[current.code]) === o.value;
+                  // Scored options carry a numeric value; diagnostic (non-scored)
+                  // options only have a code — store whichever exists.
+                  const val = o.value !== undefined ? o.value : o.code;
+                  const selected = answers[current.code] === val;
                   return (
-                    <button key={o.code} className={`opt ${selected ? "selected" : ""}`} onClick={() => setAnswer(current.code, o.value!)}>
+                    <button key={o.code} className={`opt ${selected ? "selected" : ""}`} onClick={() => setAnswer(current.code, val)}>
                       <span className="dot" /><span>{optLabelI18n(lang, current.code, o.code)}</span>
                     </button>
                   );
