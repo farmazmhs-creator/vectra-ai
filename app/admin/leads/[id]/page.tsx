@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { supabaseData } from "@/lib/supabase/data";
 import { AdminHeader } from "../../AdminChrome";
 import { LeadControls } from "./LeadControls";
+import { DeleteLeadButton } from "./DeleteLeadButton";
 import { QUESTIONS, optionLabels } from "@/lib/assessment/questions";
 import type { Answers } from "@/lib/assessment/types";
 
@@ -54,11 +55,14 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
             <h1 className="text-2xl font-bold">{lead.full_name}</h1>
             <p className="text-sm" style={{ color: "var(--muted)" }}>{lead.position ?? ""}{lead.org_name ? ` · ${lead.org_name}` : ""}</p>
           </div>
-          {result && (
-            <Link href={`/result/${result.id}`} className="btn btn-ghost" style={{ padding: "0.5rem 1rem", fontSize: 14 }}>
-              View report ↗ ({result.overall_score} · {result.stage})
-            </Link>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {result && (
+              <Link href={`/result/${result.id}`} className="btn btn-ghost" style={{ padding: "0.5rem 1rem", fontSize: 14 }}>
+                View report ↗ ({result.overall_score} · {result.stage})
+              </Link>
+            )}
+            <DeleteLeadButton leadId={lead.id} name={lead.full_name} />
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-[1fr_360px] gap-5">

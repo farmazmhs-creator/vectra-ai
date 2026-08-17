@@ -1,8 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { supabaseData } from "@/lib/supabase/data";
 import type { ProgrammeInput } from "@/lib/assessment/types";
+
+export async function deleteLead(leadId: string) {
+  const db = supabaseData();
+  // Cascades to this lead's assessments, results and notes.
+  const { error } = await db.from("leads").delete().eq("id", leadId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+  redirect("/admin");
+}
 
 export async function updateLead(leadId: string, patch: { lead_status?: string; lead_priority?: string }) {
   const db = supabaseData();
