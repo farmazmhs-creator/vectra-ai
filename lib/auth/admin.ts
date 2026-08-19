@@ -30,8 +30,15 @@ export async function expectedToken(): Promise<string> {
   return hmacHex("vectra-admin-session-v1", secret());
 }
 
-export function checkPassword(pw: string): boolean {
-  return typeof pw === "string" && pw.length > 0 && pw === secret();
+// Constant-time password check: compare HMAC(pw-check, candidate) to HMAC(pw-check, secret).
+// Avoids a short-circuiting `===` on the secret.
+export async function checkPassword(pw: string): Promise<boolean> {
+  if (typeof pw !== "string" || pw.length === 0) return false;
+  const a = await hmacHex("pw-check", pw);
+  const b = await hmacHex("pw-check", secret());
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < a.length && i < b.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 export async function isValidSession(token: string | undefined): Promise<boolean> {

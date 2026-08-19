@@ -1,10 +1,12 @@
 import { getProgrammes } from "@/lib/data/programmes";
+import { requireAdminSession } from "@/lib/auth/require";
 import { AdminHeader } from "../AdminChrome";
 import { ProgrammesManager } from "./ProgrammesManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgrammesAdmin() {
+  await requireAdminSession();
   let programmes: Awaited<ReturnType<typeof getProgrammes>> = [];
   try {
     programmes = await getProgrammes(false);

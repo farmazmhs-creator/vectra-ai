@@ -1,4 +1,5 @@
-import { supabaseData } from "@/lib/supabase/data";
+import { supabaseService } from "@/lib/supabase/service";
+import { requireAdminSession } from "@/lib/auth/require";
 import { AdminHeader } from "../AdminChrome";
 
 export const dynamic = "force-dynamic";
@@ -6,7 +7,8 @@ export const dynamic = "force-dynamic";
 const STATUS_COLOR: Record<string, string> = { sent: "var(--green)", queued: "var(--gold)", failed: "var(--red)" };
 
 export default async function EmailsAdmin() {
-  const db = supabaseData();
+  await requireAdminSession();
+  const db = supabaseService();
   const { data: emails } = await db.from("email_log").select("*").order("created_at", { ascending: false }).limit(200);
   const list = emails ?? [];
   const configured = list.some((e) => e.provider === "resend");

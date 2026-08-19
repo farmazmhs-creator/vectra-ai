@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createEnquiry, markResultViewed } from "@/lib/assessment/actions";
 import { t, type Lang } from "@/lib/i18n";
 
-export default function ResultActions({ leadId, resultId, lang }: { leadId: string; resultId: string; lang: Lang }) {
+export default function ResultActions({ resultId, lang }: { resultId: string; lang: Lang }) {
   const [open, setOpen] = useState<null | "proposal" | "consultation">(null);
   const [message, setMessage] = useState("");
   const [time, setTime] = useState("");
@@ -13,12 +13,12 @@ export default function ResultActions({ leadId, resultId, lang }: { leadId: stri
   const bm = lang === "bm";
   const tr = (k: Parameters<typeof t>[1]) => t(lang, k);
 
-  useEffect(() => { markResultViewed(leadId).catch(() => {}); }, [leadId]);
+  useEffect(() => { markResultViewed(resultId).catch(() => {}); }, [resultId]);
 
   async function submit(type: "proposal" | "consultation") {
     setBusy(true);
     try {
-      await createEnquiry({ leadId, resultId, type, message, preferred_time: time });
+      await createEnquiry({ resultId, type, message, preferred_time: time });
       setDone(
         type === "consultation"
           ? (bm ? "Terima kasih — permintaan perundingan anda telah diterima. Farmaz akan menghubungi anda untuk mengesahkan masa." : "Thank you — your consultation request has been received. Farmaz will be in touch to confirm a time.")

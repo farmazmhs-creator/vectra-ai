@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { supabaseData } from "@/lib/supabase/data";
+import { supabaseService } from "@/lib/supabase/service";
+import { resultCookieAuthorises } from "@/lib/security/session";
+import { isAdmin } from "@/lib/auth/require";
 import { SiteFooter, Brand, ScoreBar } from "@/app/components/Chrome";
 import { ROUTE_LABELS } from "@/lib/assessment/questions";
 import { ROUTE_LABELS_BM } from "@/lib/assessment/questions-bm";
@@ -30,10 +32,21 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: "gold" | "
 
 export default async function ResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = supabaseData();
-  const { data: result } = await db.from("results").select("*").eq("id", id).single();
+
+  // Authorisation gate: admin session OR a valid result-access cookie for THIS id. No enumeration.
+  const admin = await isAdmin();
+  if (!admin && !(await resultCookieAuthorises(id))) notFound();
+
+  const db = supabaseService();
+  // Whitelisted report fields only — no lead_id/assessment_id/token hashes reach the client/RSC.
+  const { data: result } = await db
+    .from("results")
+    .select("id, route, overall_score, stage, dimension_scores, strengths, gaps, investment_state, investment_note, pains, outcomes, tna_snapshot, recommendations, opportunity_horizon, next_path, created_at, lead_id")
+    .eq("id", id)
+    .single();
   if (!result) notFound();
-  const { data: lead } = await db.from("leads").select("*").eq("id", result.lead_id).single();
+  // Only the respondent's own first name + language are read from the lead (for greeting/locale).
+  const { data: lead } = await db.from("leads").select("full_name, language").eq("id", result.lead_id).single();
 
   const lang: Lang = lead?.language === "bm" ? "bm" : "en";
   const bm = lang === "bm";
@@ -220,7 +233,7 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
           </div>
         </Section>
 
-        {lead && <ResultActions leadId={lead.id} resultId={result.id} lang={lang} />}
+        <ResultActions resultId={result.id} lang={lang} />
 
         <div className="panel-2 p-5 text-xs" style={{ color: "var(--muted-2)" }}>
           <strong style={{ color: "var(--muted)" }}>{bm ? "Metodologi & batasan:" : "Methodology & limitations:"}</strong>{" "}

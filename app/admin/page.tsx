@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { supabaseData } from "@/lib/supabase/data";
+import { supabaseService } from "@/lib/supabase/service";
+import { requireAdminSession } from "@/lib/auth/require";
 import { AdminHeader, StatusBadge } from "./AdminChrome";
 import { EnquiryRow } from "./EnquiryRow";
 
@@ -15,7 +16,8 @@ function Stat({ label, value, tone }: { label: string; value: number | string; t
 }
 
 export default async function AdminHome() {
-  const db = supabaseData();
+  await requireAdminSession();
+  const db = supabaseService();
   const [{ data: leads }, { data: enquiries }, { data: results }] = await Promise.all([
     db.from("leads").select("*").order("created_at", { ascending: false }).limit(200),
     db.from("enquiries").select("*").order("created_at", { ascending: false }).limit(25),

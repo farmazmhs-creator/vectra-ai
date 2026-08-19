@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { supabaseData } from "@/lib/supabase/data";
+import { supabaseService } from "@/lib/supabase/service";
+import { requireAdminSession } from "@/lib/auth/require";
 import { AdminHeader } from "../../AdminChrome";
 import { LeadControls } from "./LeadControls";
 import { DeleteLeadButton } from "./DeleteLeadButton";
@@ -32,7 +33,8 @@ function renderAnswer(code: string, value: Answers[string]): string {
 
 export default async function LeadDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = supabaseData();
+  await requireAdminSession();
+  const db = supabaseService();
   const { data: lead } = await db.from("leads").select("*").eq("id", id).single();
   if (!lead) notFound();
 
