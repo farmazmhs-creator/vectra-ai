@@ -1,0 +1,38 @@
+name: lockfile
+# Generates package-lock.json on a trusted GitHub runner (owner has no local Node).
+# Triggers only when package.json changes, so committing the lockfile does not re-trigger it.
+on:
+  push:
+    paths:
+      - "package.json"
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Generate lockfile (no install of deps, no scripts)
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Commit lockfile if changed
+        run: |
+          if [ -n "$(git status --porcelain package-lock.json)" ]; then
+            # Commit as the owner's GitHub identity so Vercel accepts the auto-deploy.
+            git config user.name "farmazmhs-creator"
+            git config user.email "301358551+farmazmhs-creator@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore(ci): update package-lock.json"
+            git push
+          else
+            echo "package-lock.json is already up to date."
+          fi
