@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Brand } from "@/app/components/Chrome";
 import { LangToggle } from "@/app/components/LangToggle";
@@ -30,7 +30,23 @@ const COUNTRIES = ["Malaysia", "Singapore", "Indonesia", "Thailand", "Philippine
 const DEPARTMENTS = ["Organisation-wide / multiple departments", "Finance and Accounting", "Human Resources / People & Culture", "Learning and Development (L&D)", "Talent Development / Talent Management", "Shared Services or Operations", "Sales and Business Development", "Marketing and Communications", "Customer Service", "Information Technology", "Procurement and Supply Chain", "Project Management", "Leadership or Management", "Other"];
 const ORG_SIZES = ["1–10 employees", "11–50", "51–200", "201–500", "501–1,000", "1,001–5,000", "More than 5,000", "Not sure"];
 
-export default function AssessmentClient({ lang: initialLang }: { lang: Lang }) {
+type TurnstileApi = {
+  render: (el: HTMLElement, opts: Record<string, unknown>) => string;
+  reset: (id?: string) => void;
+  remove: (id?: string) => void;
+};
+function getTurnstile(): TurnstileApi | undefined {
+  return (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+}
+const TURNSTILE_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+export default function AssessmentClient({
+  lang: initialLang,
+  turnstile = { enabled: false, siteKey: null },
+}: {
+  lang: Lang;
+  turnstile?: { enabled: boolean; siteKey: string | null };
+}) {
   const router = useRouter();
   const [lang, setLangState] = useState<Lang>(initialLang);
   const [phase, setPhase] = useState<Phase>("route");
@@ -48,6 +64,55 @@ export default function AssessmentClient({ lang: initialLang }: { lang: Lang }) 
   const [kyc, setKyc] = useState<KycProfile>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Turnstile: active = enforcement on AND a site key is present (render widget, require token).
+  // Misconfigured = enforcement on but no site key (show config error, block submission).
+  const tsActive = turnstile.enabled && !!turnstile.siteKey;
+  const tsMisconfigured = turnstile.enabled && !turnstile.siteKey;
+  const [tsToken, setTsToken] = useState<string | null>(null);
+  const tsRef = useRef<HTMLDivElement | null>(null);
+  const tsWidgetId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!tsActive || phase !== "kyc") return;
+    let cancelled = false;
+    const renderWidget = () => {
+      const api = getTurnstile();
+      const el = tsRef.current;
+      if (cancelled || !api || !el || tsWidgetId.current) return;
+      tsWidgetId.current = api.render(el, {
+        sitekey: turnstile.siteKey,
+        action: "unlock",
+        callback: (token: string) => setTsToken(token),
+        "expired-callback": () => setTsToken(null),
+        "error-callback": () => setTsToken(null),
+      });
+    };
+    let script: HTMLScriptElement | null = null;
+    if (getTurnstile()) {
+      renderWidget();
+    } else {
+      script = document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SRC}"]`);
+      if (!script) {
+        script = document.createElement("script");
+        script.src = TURNSTILE_SRC;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", renderWidget);
+    }
+    return () => {
+      cancelled = true;
+      script?.removeEventListener("load", renderWidget);
+      const api = getTurnstile();
+      if (api && tsWidgetId.current) {
+        try { api.remove(tsWidgetId.current); } catch { /* widget already gone */ }
+      }
+      tsWidgetId.current = null;
+      setTsToken(null);
+    };
+  }, [tsActive, phase, turnstile.siteKey]);
 
   const tr = (k: Parameters<typeof t>[1]) => t(lang, k);
   const routeLabel = (r: Route) => (lang === "bm" ? ROUTE_LABELS_BM[r] : ROUTE_LABELS[r]);
@@ -125,16 +190,35 @@ export default function AssessmentClient({ lang: initialLang }: { lang: Lang }) 
     if (isOrg && !kyc.org_name?.trim()) return setError(bm ? "Sila masukkan nama organisasi anda." : "Please enter your organisation name.");
     if (!ids) return setError(bm ? "Sesi tamat. Sila mulakan semula penilaian." : "Session expired. Please restart the assessment.");
 
+    // Turnstile client-side gates (server re-verifies regardless).
+    if (tsMisconfigured) {
+      return setError(bm
+        ? "Pengesahan keselamatan tidak tersedia buat sementara waktu. Sila cuba sebentar lagi."
+        : "Security verification is temporarily unavailable. Please try again shortly.");
+    }
+    if (tsActive && !tsToken) {
+      return setError(bm
+        ? "Sila lengkapkan pengesahan keselamatan untuk meneruskan."
+        : "Please complete the security check to continue.");
+    }
+
     setBusy(true);
     try {
       const { resultId } = await completeAssessment({
         leadId: ids.leadId, assessmentId: ids.assessmentId, route,
         client_subroute: route === "client" ? subRoute : undefined,
         answers, kyc, lang,
+        turnstileToken: tsToken ?? undefined,
       });
       router.push(`/result/${resultId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate your result. Please try again.");
+      // The token is single-use; mint a fresh one for any retry.
+      if (tsActive) {
+        const api = getTurnstile();
+        if (api && tsWidgetId.current) { try { api.reset(tsWidgetId.current); } catch { /* noop */ } }
+        setTsToken(null);
+      }
       setBusy(false);
     }
   }
@@ -364,9 +448,22 @@ export default function AssessmentClient({ lang: initialLang }: { lang: Lang }) 
               </div>
             </div>
 
+            {tsMisconfigured && (
+              <div className="mt-5 text-sm" role="alert" style={{ color: "#ffb4b4" }}>
+                {lang === "bm"
+                  ? "Pengesahan keselamatan tidak tersedia buat sementara waktu. Sila cuba sebentar lagi."
+                  : "Security verification is temporarily unavailable. Please try again shortly."}
+              </div>
+            )}
+            {tsActive && <div ref={tsRef} className="mt-5" />}
+
             <div className="flex gap-3 mt-6">
               <button className="btn btn-ghost" onClick={() => setPhase("questions")} disabled={busy}>{tr("a_back")}</button>
-              <button className="btn btn-gold flex-1" disabled={busy} onClick={submitKyc}>{busy ? tr("unlock_generating") : tr("unlock_cta")}</button>
+              <button
+                className="btn btn-gold flex-1"
+                disabled={busy || tsMisconfigured || (tsActive && !tsToken)}
+                onClick={submitKyc}
+              >{busy ? tr("unlock_generating") : tr("unlock_cta")}</button>
             </div>
             <p className="text-xs mt-4" style={{ color: "var(--muted-2)" }}>{tr("unlock_privacy")}</p>
           </div>

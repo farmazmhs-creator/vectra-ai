@@ -9,6 +9,7 @@ import { sha256hex, randomToken } from "@/lib/security/crypto";
 import { setAssessmentCookie, getAssessmentToken, setResultCookie, resultCookieAuthorises, ASMT_TTL_SECONDS } from "@/lib/security/session";
 import { isAdmin } from "@/lib/auth/require";
 import { validateAnswers, validateKyc, validateRoute, validateSubRoute, isValidEmail, sanitizeText } from "@/lib/security/validate";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 import type { Route, SubRoute } from "./types";
 
 interface StartInput {
@@ -66,14 +67,32 @@ interface CompleteInput {
   answers: unknown;
   kyc: unknown;
   lang?: "en" | "bm";
+  turnstileToken?: string;
 }
 
 export async function completeAssessment(input: CompleteInput): Promise<{ resultId: string }> {
+  // Rate limiting stays first and is independent of Turnstile.
   const rl = await rateLimit("unlock");
   if (rl !== "ok") throw new Error("Too many attempts. Please wait a moment and try again.");
 
   const token = await getAssessmentToken();
   if (!token) throw new Error("Your session has expired. Please restart the assessment.");
+
+  // Bot gate (additional to — never a replacement for — rate limiting + validation below).
+  // Enabled only when TURNSTILE_ENABLED=true; then it fails CLOSED on any non-pass outcome.
+  if (process.env.TURNSTILE_ENABLED === "true") {
+    const outcome = await verifyTurnstile(input.turnstileToken);
+    if (!outcome.ok) {
+      if (outcome.reason === "misconfigured") {
+        throw new Error("Verification is temporarily unavailable. Please try again in a moment.");
+      }
+      if (outcome.reason === "network-error") {
+        throw new Error("We couldn't complete the verification check. Please retry.");
+      }
+      // missing-token | failed (invalid / expired / replayed / hostname or action mismatch)
+      throw new Error("Verification failed. Please complete the challenge again.");
+    }
+  }
 
   const kyc = validateKyc(input.kyc);
   if (!isValidEmail(kyc.email) || !kyc.industry || !kyc.country || !kyc.position) {
